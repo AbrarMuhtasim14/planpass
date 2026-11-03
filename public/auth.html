@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PlanPass — Sign in</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="auth-body">
+    <main class="auth-card">
+      <div class="logo">PP</div>
+      <h1>PlanPass</h1>
+      <p class="muted">Municipal Blueprint &amp; Code Compliance Examiner — reviewer sign-in (Neon Auth)</p>
+      <form id="auth-form">
+        <label>
+          Email
+          <input id="email" type="email" autocomplete="email" required />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" autocomplete="current-password" required minlength="8" />
+        </label>
+        <label>
+          Display name (sign-up only)
+          <input id="name" type="text" autocomplete="name" />
+        </label>
+        <div class="row">
+          <button id="signin" type="submit" class="primary">Sign in</button>
+          <button id="signup" type="button">Create account</button>
+        </div>
+        <p id="auth-error" role="alert"></p>
+      </form>
+    </main>
+    <script src="/auth.js"></script>
+  </body>
+</html>

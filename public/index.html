@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PlanPass — AI Municipal Blueprint &amp; Code Compliance Examiner</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">PP</div>
+        <div>
+          <h1>PlanPass</h1>
+          <p>AI Municipal Blueprint &amp; Code Compliance Examiner</p>
+        </div>
+      </div>
+      <div class="controls">
+        <label>
+          Occupancy
+          <select id="occupancy">
+            <option value="Commercial">Commercial Assembly</option>
+            <option value="Business">Business / Office</option>
+            <option value="Residential">Residential ADU</option>
+          </select>
+        </label>
+        <span class="scale">Scale: 24 px = 1 ft</span>
+        <select id="benchmark">
+          <option value="">Sample floorplans…</option>
+          <option value="cafe-violation">Commercial Cafe — Violation State</option>
+          <option value="cafe-compliant">Commercial Cafe — Compliant State</option>
+          <option value="residential-adu">Residential ADU Layout</option>
+        </select>
+        <label class="upload">
+          Upload floorplan
+          <input id="upload" type="file" accept="image/png,image/jpeg,image/webp,.pdf" />
+        </label>
+        <button id="signout" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <section class="voicebar">
+      <button id="ptt" type="button" aria-pressed="false">● Hold to talk — Voice Scope</button>
+      <canvas id="waveform" width="220" height="36" aria-hidden="true"></canvas>
+      <span id="transcript" class="pill">No voice scope yet — or pick a preset:</span>
+      <button class="chip" data-scope="Audit this commercial floorplan for ADA restroom clearance and IBC egress corridor width" type="button">
+        ADA + Egress audit
+      </button>
+      <button class="chip" data-scope="Check ADA restroom clearance only" type="button">ADA restroom only</button>
+      <button class="chip" data-scope="Check corridor egress width only" type="button">Egress width only</button>
+    </section>
+
+    <main class="layout">
+      <section class="stage">
+        <div class="toolbar">
+          <strong>Layer controls</strong>
+          <label><input type="checkbox" data-layer="all" checked /> All masks</label>
+          <label><input type="checkbox" data-layer="door" checked /> Doors</label>
+          <label><input type="checkbox" data-layer="corridor" checked /> Corridors</label>
+          <label><input type="checkbox" data-layer="bathroom" checked /> Restrooms</label>
+          <label><input type="checkbox" data-layer="violation" checked /> Violation boxes</label>
+          <label><input type="checkbox" data-layer="compare" /> Side-by-side redline</label>
+          <span class="zoom">
+            <button id="zoom-out" type="button">−</button>
+            <button id="zoom-in" type="button">+</button>
+            <button id="zoom-reset" type="button">Reset view</button>
+          </span>
+        </div>
+        <div id="viewport" class="viewport">
+          <div id="canvas" class="canvas">
+            <img id="plan-img" alt="Architectural floorplan" />
+            <svg id="overlay" viewBox="0 0 1000 800" preserveAspectRatio="none" aria-label="Segmentation overlays"></svg>
+          </div>
+          <div id="compare-wrap" class="compare hidden">
+            <img id="redline-img" alt="Generative redlined correction blueprint" />
+          </div>
+          <p id="stage-empty" class="empty">Select a benchmark floorplan or upload a plan to begin the pre-permit check.</p>
+        </div>
+      </section>
+
+      <aside class="drawer">
+        <nav class="tabs">
+          <button class="tab active" data-tab="audit" type="button">Compliance Audit Ledger</button>
+          <button class="tab" data-tab="trace" type="button">Agent &amp; MCP Trace</button>
+          <button class="tab" data-tab="history" type="button">History</button>
+        </nav>
+
+        <section id="tab-audit" class="panel active">
+          <div class="gauge-wrap">
+            <svg class="gauge" viewBox="0 0 120 120" role="img" aria-label="Permit readiness score">
+              <circle cx="60" cy="60" r="52" class="gauge-bg" />
+              <circle id="gauge-arc" cx="60" cy="60" r="52" class="gauge-arc" />
+              <text id="gauge-text" x="60" y="66" text-anchor="middle">—</text>
+            </svg>
+            <span id="status-badge" class="badge neutral">NO INSPECTION YET</span>
+          </div>
+          <div id="violations" class="violations">
+            <p class="muted">Run an inspection to see the statutory violation ledger.</p>
+          </div>
+        </section>
+
+        <section id="tab-trace" class="panel">
+          <div id="trace"><p class="muted">Node trace and MCP tool calls will appear here.</p></div>
+        </section>
+
+        <section id="tab-history" class="panel">
+          <button id="refresh-history" type="button">Refresh history</button>
+          <ul id="history"></ul>
+        </section>
+
+        <footer class="actions">
+          <button id="inspect" type="button" class="primary">Run inspection</button>
+          <button id="redline" type="button" class="danger" disabled>Generate Visual Redline Fix</button>
+          <button id="reverify" type="button" disabled>Re-Verify Fixed Plan</button>
+          <button id="permit" type="button" disabled>Download Stamped Permit PDF</button>
+          <button id="dataset" type="button" disabled>Export Air-Gapped JSONL Dataset</button>
+        </footer>
+      </aside>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
