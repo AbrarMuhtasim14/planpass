@@ -118,6 +118,18 @@ app.get("/api/plans", async (c) => {
   return c.json({ plans });
 });
 
+app.get("/api/plans/:id", async (c) => {
+  const user = await currentUser(c);
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  const { rows } = await pool.query(
+    `SELECT id, s3_key, filename, mime_type, source, created_at FROM plans WHERE id = $1 AND uploaded_by = $2`,
+    [c.req.param("id"), user.id],
+  );
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  const url = await planPresignedUrl(rows[0].s3_key as string);
+  return c.json({ ...rows[0], url });
+});
+
 // --- Voice scope (Node 1) ---
 app.post("/api/voice/transcribe", async (c) => {
   const user = await currentUser(c);
@@ -182,22 +194,41 @@ app.post("/api/redline", async (c) => {
     mode?: "deterministic" | "live";
   };
 
-  const instructionsFrom = async (inspectionId?: string): Promise<{ text: string; report?: InspectionReport }> => {
+  const instructionsFrom = async (
+    inspectionId?: string,
+  ): Promise<{ text: string; report?: InspectionReport; planId?: string | null }> => {
     if (!inspectionId) return { text: "" };
-    const { rows } = await pool.query(`SELECT report FROM inspections WHERE id = $1 AND user_id = $2`, [
+    const { rows } = await pool.query(`SELECT report, plan_id FROM inspections WHERE id = $1 AND user_id = $2`, [
       inspectionId,
       user.id,
     ]);
     const report = rows[0]?.report as InspectionReport | undefined;
     if (!report) return { text: "" };
-    return { text: report.violations.map((v) => `${v.id}: ${v.remediationInstruction}`).join(" "), report };
+    return {
+      text: report.violations.map((v) => `${v.id}: ${v.remediationInstruction}`).join(" "),
+      report,
+      planId: rows[0]?.plan_id as string | null,
+    };
   };
 
-  const { text: remediation, report: sourceReport } = await instructionsFrom(body.inspectionId);
+  const { text: remediation, report: sourceReport, planId: sourcePlanId } = await instructionsFrom(body.inspectionId);
   const instructions = remediation || "Flip restroom door swing outward; widen corridor to 44 inches; add red dimension callouts.";
 
+  let imageB64 = body.imageBase64 ?? "";
+  const targetPlanId = sourceReport?.planId || sourcePlanId;
+  if (!imageB64 && targetPlanId) {
+    const { rows } = await pool.query(`SELECT s3_key FROM plans WHERE id = $1 AND uploaded_by = $2`, [
+      targetPlanId,
+      user.id,
+    ]);
+    if (rows[0]?.s3_key) {
+      const bytes = await downloadPlanBytes(rows[0].s3_key as string);
+      imageB64 = Buffer.from(bytes).toString("base64");
+    }
+  }
+
   // Deterministic closed-loop for benchmark violation plan (PRD §7)
-  if (body.benchmarkId === "cafe-violation" || body.mode === "deterministic" || !body.imageBase64) {
+  if (body.benchmarkId === "cafe-violation" || (!imageB64 && body.mode === "deterministic")) {
     const reReport = remediatedReport(body.inspectionId ?? sourceReport?.inspectionId ?? "insp_redline");
     await saveInspection(reReport, user.id);
     const svg = await benchmarkSvgBytes("cafe-compliant");
@@ -209,7 +240,17 @@ app.post("/api/redline", async (c) => {
     });
   }
 
-  const live = await generateRedline(body.imageBase64, instructions);
+  if (!imageB64) {
+    return c.json({ error: "No image source found for redline generation" }, 400);
+  }
+
+  const live = await generateRedline(imageB64, instructions);
+  if (body.inspectionId) {
+    await pool.query(
+      `UPDATE inspections SET report = jsonb_set(jsonb_set(report, '{redlineImageBase64}', to_jsonb($1::text)), '{redlineMime}', '"image/png"') WHERE id = $2 AND user_id = $3`,
+      [live.redlineImageB64, body.inspectionId, user.id],
+    );
+  }
   return c.json({
     mode: "live",
     responseId: live.responseId,

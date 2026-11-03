@@ -72,7 +72,12 @@
             <svg id="overlay" viewBox="0 0 1000 800" preserveAspectRatio="none" aria-label="Segmentation overlays"></svg>
           </div>
           <div id="compare-wrap" class="compare hidden">
-            <img id="redline-img" alt="Generative redlined correction blueprint" />
+            <div id="compare-placeholder" class="compare-placeholder">
+              <div class="ph-icon">📐</div>
+              <p><strong>No redline generated yet</strong></p>
+              <p class="muted">Click <strong>Generate Visual Redline Fix</strong> in the inspector drawer to generate architectural markups with Meta muse-image-1.0.</p>
+            </div>
+            <img id="redline-img" alt="Generative redlined correction blueprint" style="display:none;" />
           </div>
           <p id="stage-empty" class="empty">Select a benchmark floorplan or upload a plan to begin the pre-permit check.</p>
         </div>

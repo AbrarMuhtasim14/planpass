@@ -198,6 +198,17 @@ function renderReport(report) {
   }
 
   drawOverlays(report);
+  if (report.redlineImageBase64) {
+    els["redline-img"].src = `data:${report.redlineMime || "image/png"};base64,${report.redlineImageBase64}`;
+    els["redline-img"].style.display = "block";
+    const ph = $("compare-placeholder");
+    if (ph) ph.style.display = "none";
+  } else {
+    els["redline-img"].src = "";
+    els["redline-img"].style.display = "none";
+    const ph = $("compare-placeholder");
+    if (ph) ph.style.display = "block";
+  }
   els.redline.disabled = report.status !== "HOLD";
   els.reverify.disabled = true;
   els.permit.disabled = report.status !== "APPROVED";
@@ -261,6 +272,9 @@ async function generateRedline() {
     });
     if (data.redlineImageBase64) {
       els["redline-img"].src = `data:${data.redlineMime};base64,${data.redlineImageBase64}`;
+      els["redline-img"].style.display = "block";
+      const ph = $("compare-placeholder");
+      if (ph) ph.style.display = "none";
       document.querySelector('[data-layer="compare"]').checked = true;
       applyLayers();
     }
@@ -293,7 +307,34 @@ async function loadHistory() {
     els.history.innerHTML = "";
     for (const row of data.inspections) {
       const li = document.createElement("li");
+      li.style.cursor = "pointer";
+      li.style.padding = "6px 8px";
+      li.style.borderRadius = "4px";
       li.textContent = `${row.id} · ${row.status} · ${row.readiness_score}% · ${new Date(row.created_at).toLocaleString()}`;
+      li.addEventListener("click", async () => {
+        try {
+          const report = await api(`/api/inspections/${row.id}`);
+          if (row.plan_id) {
+            const plan = await api(`/api/plans/${row.plan_id}`).catch(() => null);
+            if (plan?.url) {
+              els["plan-img"].src = plan.url;
+              els["plan-img"].style.display = "block";
+              els["stage-empty"].classList.add("hidden");
+            }
+          } else if (report.planId) {
+            const file = { "cafe-violation": "cafe-violation.svg", "cafe-compliant": "cafe-compliant.svg", "residential-adu": "residential-adu.svg" }[report.planId];
+            if (file) {
+              els["plan-img"].src = `/benchmarks/${file}`;
+              els["plan-img"].style.display = "block";
+              els["stage-empty"].classList.add("hidden");
+            }
+          }
+          renderReport(report);
+          activateTab("audit");
+        } catch (e) {
+          alert(e.message);
+        }
+      });
       els.history.appendChild(li);
     }
     if (!data.inspections.length) els.history.innerHTML = "<li>No inspections yet.</li>";
