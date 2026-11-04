@@ -178,30 +178,12 @@ app.post("/api/inspect", async (c) => {
   // Repeat-run consistency: identical image bytes + identical audit params
   // return the stored verified report instead of re-sampling the models.
   // Fast path uses the plan's stored sha256 — no S3 download on a cache hit.
-  const paramsHash = sha256(JSON.stringify({
-    occupancy: body.occupancy ?? "",
-    instruction: body.instruction ?? body.transcript ?? "",
-    concepts: normalizeConcepts(body.concepts),
-    pixelsPerFoot: body.pixelsPerFoot && body.pixelsPerFoot > 0 ? body.pixelsPerFoot : null,
-  }));
-  const cacheLookup = async (planHash: string) => {
-    const cached = await pool.query(
-      `SELECT report FROM inspections WHERE user_id = $1 AND report->>'planHash' = $2 AND report->>'paramsHash' = $3 ORDER BY created_at DESC LIMIT 1`,
-      [user.id, planHash, paramsHash],
-    );
-    return cached.rows[0]?.report as InspectionReport | undefined;
-  };
-
   let planHash = "";
   if (planId && !imageB64) {
     const { rows } = await pool.query(`SELECT s3_key, mime_type, uploaded_by, sha256 FROM plans WHERE id = $1`, [planId]);
     const plan = rows[0];
     if (!plan) return c.json({ error: "Plan not found" }, 404);
     if (plan.uploaded_by !== user.id) return c.json({ error: "Forbidden" }, 403);
-    if (plan.sha256) {
-      const hit = await cacheLookup(plan.sha256 as string);
-      if (hit) return c.json(await enrichReport(hit));
-    }
     const bytes = await downloadPlanBytes(plan.s3_key as string);
     imageB64 = Buffer.from(bytes).toString("base64");
     mime = (plan.mime_type as string) || mime;
@@ -211,8 +193,9 @@ app.post("/api/inspect", async (c) => {
 
   const info = imageInfo(Buffer.from(imageB64, "base64"));
   planHash = sha256(Buffer.from(imageB64, "base64"));
-  const hit = await cacheLookup(planHash);
-  if (hit) return c.json(await enrichReport(hit));
+
+  // Always execute the live multimodal vision pipeline and live FastMCP tools.
+  // No caching, no bypass: every inspection is evaluated live.
   const report = await runLiveInspection({
     inputImageB64: imageB64,
     inputImageUrl: imageUrl,
@@ -229,7 +212,6 @@ app.post("/api/inspect", async (c) => {
   });
   report.transcript = body.transcript ?? report.transcript;
   report.planHash = planHash;
-  report.paramsHash = paramsHash;
   await saveInspection(report, user.id);
   return c.json(report);
 });
