@@ -1,0 +1,46 @@
+{
+  "statutes": [
+    {
+      "codeId": "ADA-304.3",
+      "title": "Turning Space",
+      "text": "ADA 2010 Section 304.3: A turning space shall be a space of 60 inches (1525 mm) diameter minimum, or a T-shaped space complying with 304.3.2, provided for a wheelchair to make a 180-degree turn."
+    },
+    {
+      "codeId": "ADA-604.3.2",
+      "title": "Overlap of Water Closet Clearance",
+      "text": "ADA 2010 Section 604.3.2: The required clearance around the water closet shall be permitted to overlap the water closet, associated grab bars, dispensers, sanitary napkin disposal units, coat hooks, shelves, accessible routes, clear floor space and clearances required at other fixtures, and the turning space, provided door swing does not overlap required fixture clearance."
+    },
+    {
+      "codeId": "ADA-404.2.3",
+      "title": "Clear Width of Doorways",
+      "text": "ADA 2010 Section 404.2.3: Door openings shall provide a clear width of 32 inches (815 mm) minimum. Clear openings of doorways with swinging doors shall be measured between the face of the door and the stop, with the door open 90 degrees."
+    },
+    {
+      "codeId": "IBC-1020.2",
+      "title": "Corridor Fire-Resistance Rating / Width",
+      "text": "IBC 2024 Section 1020.2 (Table 1020.2): Corridors in Group A (assembly) occupancies serving an occupant load greater than 30 shall have a minimum clear width of 44 inches (1118 mm). Corridors in Group R occupancies shall have a minimum clear width of 36 inches (914 mm)."
+    },
+    {
+      "codeId": "IRC-R310.1",
+      "title": "Emergency Escape and Rescue Openings",
+      "text": "IRC Section R310.1: Basements, habitable attics and every sleeping room shall have not less than one operable emergency escape and rescue opening with a minimum net clear opening of 5.7 square feet (5.0 square feet for grade-floor openings), minimum net clear opening height of 24 inches and minimum net clear opening width of 20 inches."
+    },
+    {
+      "codeId": "IRC-R304.1",
+      "title": "Minimum Habitable Room Area",
+      "text": "IRC Section R304.1: Every dwelling unit shall have at least one habitable room that shall have not less than 120 square feet of gross floor area. Other habitable rooms shall have a floor area of not less than 70 square feet."
+    }
+  ],
+  "rules": {
+    "corridorWidth": [
+      { "occupancies": ["assembly", "commercial", "cafe", "group a", "a-"], "requiredIn": 44, "statuteCodeId": "IBC-1020.2" },
+      { "occupancies": ["residential", "group r", "r-"], "requiredIn": 36, "statuteCodeId": "IBC-1020.2" },
+      { "occupancies": ["factory", "industrial", "group f", "f-1", "f-2", "*"], "requiredIn": 44, "statuteCodeId": "IBC-1020.2" }
+    ],
+    "turningCircle": {
+      "requiredIn": 60,
+      "statuteCodeId": "ADA-604.3.2",
+      "obstructionKeywords": ["door swing", "door", "swing", "overlap", "obstruct"]
+    }
+  }
+}
