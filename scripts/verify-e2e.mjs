@@ -1,8 +1,26 @@
 // PlanPass end-to-end verification against the running server on :3000.
 // Usage: node scripts/verify-e2e.mjs
 import { readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 
 const BASE = "http://localhost:3000";
+
+// Auto-start server if not already running on :3000
+let autoStartedServer = null;
+try {
+  await fetch(BASE + "/api/health");
+} catch {
+  console.log("Server not running on :3000 — automatically starting node dist/server.js...");
+  autoStartedServer = spawn("node", ["dist/server.js"], { stdio: "ignore" });
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 250));
+    try {
+      const h = await fetch(BASE + "/api/health");
+      if (h.ok) break;
+    } catch {}
+  }
+}
+
 const stamp = Date.now();
 const email = `planpass-verify-${stamp}@example.com`;
 const password = "PlanPass-Verify-2026!";
@@ -126,3 +144,7 @@ let planId = null;
 }
 
 console.log("\n" + results.filter(r=>r.ok).length + "/" + results.length + " checks passed");
+
+if (autoStartedServer) {
+  autoStartedServer.kill();
+}
