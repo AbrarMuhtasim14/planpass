@@ -12,6 +12,7 @@ export const SAMPLES: SampleDef[] = [
   { id: "cafe-compliant", label: "Commercial Cafe — sample plan B", file: "cafe-compliant.svg" },
   { id: "residential-adu", label: "Residential ADU — sample plan", file: "residential-adu.svg" },
   { id: "garments-factory", label: "Garments Manufacturing (Group F-1) — Ground Floor", file: "garments_factory_floorplan.jpg" },
+  { id: "hospital-first-floor", label: "General Hospital (Group I-2) — First Floor", file: "hospital_first_floor.jpg" },
 ];
 
 export function getSample(id: string): SampleDef | undefined {

@@ -180,7 +180,11 @@ async function uploadPlan(event) {
     els["plan-img"].style.display = "block";
     els["stage-empty"].classList.add("hidden");
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   }
 }
 
@@ -211,7 +215,11 @@ async function runInspection() {
       finally { setBusy(false); }
     }
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   } finally {
     setBusy(false);
   }
@@ -376,7 +384,11 @@ async function generateRedline() {
     els["export-clean-img"].disabled = !state.revisedUrl;
     els["export-pkg"].disabled = false;
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   } finally {
     setBusy(false);
   }
@@ -392,7 +404,11 @@ async function exportImage(url, kind) {
     a.click();
     URL.revokeObjectURL(a.href);
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   }
 }
 
@@ -407,7 +423,11 @@ async function exportPackage() {
     a.click();
     URL.revokeObjectURL(a.href);
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   }
 }
 
@@ -428,7 +448,11 @@ async function reverify() {
     renderReport(report);
     activateTab("audit");
   } catch (e) {
-    alert(e.message);
+    console.error("Upload failed:", e);
+    if (els["status-badge"]) {
+      els["status-badge"].textContent = `Upload error: ${e.message}`;
+      els["status-badge"].className = "status-badge hold";
+    }
   } finally {
     setBusy(false);
   }
