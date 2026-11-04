@@ -17,19 +17,20 @@
       </div>
       <div class="controls">
         <label>
-          Occupancy
-          <select id="occupancy">
-            <option value="Commercial">Commercial Assembly</option>
-            <option value="Business">Business / Office</option>
-            <option value="Residential">Residential ADU</option>
-          </select>
+          Occupancy (free-form)
+          <input id="occupancy" type="text" list="occupancy-list" placeholder="e.g. Group A assembly, cafe" />
+          <datalist id="occupancy-list">
+            <option value="Commercial Assembly"></option>
+            <option value="Business / Office"></option>
+            <option value="Residential ADU"></option>
+          </datalist>
         </label>
-        <span class="scale">Scale: 24 px = 1 ft</span>
+        <label>
+          Scale px/ft
+          <input id="pixels-per-foot" type="number" min="0" step="any" placeholder="from plan" style="width:90px" />
+        </label>
         <select id="benchmark">
-          <option value="">Sample floorplans…</option>
-          <option value="cafe-violation">Commercial Cafe — Violation State</option>
-          <option value="cafe-compliant">Commercial Cafe — Compliant State</option>
-          <option value="residential-adu">Residential ADU Layout</option>
+          <option value="">Sample floorplans (live inspection)…</option>
         </select>
         <label class="upload">
           Upload floorplan
@@ -48,6 +49,8 @@
       </button>
       <button class="chip" data-scope="Check ADA restroom clearance only" type="button">ADA restroom only</button>
       <button class="chip" data-scope="Check corridor egress width only" type="button">Egress width only</button>
+      <input id="scope-input" type="text" placeholder="Inspection scope (editable, or use voice/chips)" style="flex:1;min-width:220px" />
+      <input id="concepts-input" type="text" placeholder="Segment concepts, comma-separated (blank = agent proposes)" style="flex:1;min-width:220px" />
     </section>
 
     <main class="layout">
@@ -60,6 +63,7 @@
           <label><input type="checkbox" data-layer="bathroom" checked /> Restrooms</label>
           <label><input type="checkbox" data-layer="violation" checked /> Violation boxes</label>
           <label><input type="checkbox" data-layer="compare" /> Side-by-side redline</label>
+          <label><input type="checkbox" data-layer="revised" /> Clean revised blueprint</label>
           <span class="zoom">
             <button id="zoom-out" type="button">−</button>
             <button id="zoom-in" type="button">+</button>
@@ -78,6 +82,14 @@
               <p class="muted">Click <strong>Generate Visual Redline Fix</strong> in the inspector drawer to generate architectural markups with Meta muse-image-1.0.</p>
             </div>
             <img id="redline-img" alt="Generative redlined correction blueprint" style="display:none;" />
+          </div>
+          <div id="revised-wrap" class="compare hidden">
+            <div id="revised-placeholder" class="compare-placeholder">
+              <div class="ph-icon">📐</div>
+              <p><strong>No clean revised plan yet</strong></p>
+              <p class="muted">Click <strong>Generate Redline + Clean Revised Plan</strong> — the clean blueprint (fixes baked in, no markup) appears here and is what <strong>Re-Inspect</strong> audits.</p>
+            </div>
+            <img id="revised-img" alt="Clean revised architectural blueprint" style="display:none;" />
           </div>
           <p id="stage-empty" class="empty">Select a benchmark floorplan or upload a plan to begin the pre-permit check.</p>
         </div>
@@ -115,9 +127,11 @@
 
         <footer class="actions">
           <button id="inspect" type="button" class="primary">Run inspection</button>
-          <button id="redline" type="button" class="danger" disabled>Generate Visual Redline Fix</button>
-          <button id="reverify" type="button" disabled>Re-Verify Fixed Plan</button>
+          <button id="export-redline-img" type="button" disabled>Export Redline Image</button>
+          <button id="export-clean-img" type="button" disabled>Export Clean Revised Image</button>
+          <button id="export-pkg" type="button" disabled>Export Redline Package</button>
           <button id="permit" type="button" disabled>Download Stamped Permit PDF</button>
+          <button id="email-permit" type="button" disabled>Email Permit Packet</button>
           <button id="dataset" type="button" disabled>Export Air-Gapped JSONL Dataset</button>
         </footer>
       </aside>

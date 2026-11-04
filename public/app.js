@@ -1,10 +1,11 @@
 const state = {
   user: null,
   report: null,
-  benchmarkId: "",
+  sampleId: "",
   planId: null,
-  imageBase64: "",
-  imageMime: "image/png",
+  redlineUrl: "",
+  revisedUrl: "",
+  autoFor: "",
   instruction: "",
   scale: 1,
   pan: { x: 0, y: 0 },
@@ -17,7 +18,7 @@ async function api(path, options = {}) {
   const res = await fetch(path, { credentials: "include", ...options });
   if (res.status === 401) {
     window.location.href = "/auth.html";
-    throw new Error("Unauthorized");
+    return new Promise(() => {});
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || data.message || `Request failed (${res.status})`);
@@ -27,7 +28,7 @@ async function api(path, options = {}) {
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
-  ["occupancy", "benchmark", "upload", "signout", "ptt", "transcript", "plan-img", "overlay", "viewport", "canvas", "compare-wrap", "redline-img", "stage-empty", "gauge-arc", "gauge-text", "status-badge", "violations", "trace", "history", "inspect", "redline", "reverify", "permit", "dataset", "refresh-history"].forEach((id) => (els[id] = $(id)));
+  ["occupancy", "pixels-per-foot", "scope-input", "concepts-input", "benchmark", "upload", "signout", "ptt", "transcript", "plan-img", "overlay", "viewport", "canvas", "compare-wrap", "redline-img", "revised-wrap", "revised-img", "stage-empty", "gauge-arc", "gauge-text", "status-badge", "violations", "trace", "history", "inspect", "export-redline-img", "export-clean-img", "export-pkg", "permit", "email-permit", "dataset", "refresh-history"].forEach((id) => (els[id] = $(id)));
   const me = await fetch("/api/me", { credentials: "include" });
   if (!me.ok) {
     window.location.href = "/auth.html";
@@ -35,12 +36,16 @@ async function init() {
   }
   state.user = (await me.json()).user;
 
-  els.benchmark.addEventListener("change", loadBenchmark);
+  els.benchmark.addEventListener("change", loadSample);
+  els["scope-input"].addEventListener("input", () => { state.instruction = els["scope-input"].value; els.transcript.textContent = state.instruction || "No voice scope yet — or pick a preset:"; });
+  loadSamples();
   els.upload.addEventListener("change", uploadPlan);
   els.inspect.addEventListener("click", runInspection);
-  els.redline.addEventListener("click", generateRedline);
-  els.reverify.addEventListener("click", reverify);
+  els["export-redline-img"].addEventListener("click", () => exportImage(state.redlineUrl, "redline"));
+  els["export-clean-img"].addEventListener("click", () => exportImage(state.revisedUrl, "clean-revised"));
+  els["export-pkg"].addEventListener("click", exportPackage);
   els.permit.addEventListener("click", () => download(`/api/inspections/${state.report.inspectionId}/permit.pdf`));
+  els["email-permit"].addEventListener("click", emailPermit);
   els.dataset.addEventListener("click", () => download(`/api/inspections/${state.report.inspectionId}/dataset.jsonl`));
   els.signout.addEventListener("click", signOut);
   els["refresh-history"].addEventListener("click", loadHistory);
@@ -72,66 +77,115 @@ function activateTab(name) {
 
 function setInstruction(text) {
   state.instruction = text || "";
+  if (els["scope-input"]) els["scope-input"].value = state.instruction;
   els.transcript.textContent = text || "No voice scope yet — or pick a preset:";
 }
 
-async function loadBenchmark() {
-  const id = els.benchmark.value;
-  state.benchmarkId = id;
-  state.planId = null;
-  if (!id) return;
-  const res = await fetch(`/benchmarks/${id === "residential-adu" ? "residential-adu" : id}.svg`);
-  // Benchmark files are cafe-violation.svg / cafe-compliant.svg / residential-adu.svg
-  const file = { "cafe-violation": "cafe-violation.svg", "cafe-compliant": "cafe-compliant.svg", "residential-adu": "residential-adu.svg" }[id];
-  const svgRes = await fetch(`/benchmarks/${file}`);
-  els["plan-img"].src = URL.createObjectURL(await svgRes.blob());
-  els["plan-img"].style.display = "block";
-  els["stage-empty"].classList.add("hidden");
-  setInstruction(
-    id === "residential-adu"
-      ? "Check this ADU for bedroom egress window and habitable room area."
-      : "Audit this commercial floorplan for ADA restroom clearance and IBC egress corridor width",
-  );
-  runBenchmarkInspection(id);
+function agentParams() {
+  return {
+    occupancy: els.occupancy.value.trim(),
+    instruction: state.instruction,
+    transcript: state.instruction,
+    concepts: els["concepts-input"].value.split(",").map((s) => s.trim()).filter(Boolean),
+    pixelsPerFoot: Number(els["pixels-per-foot"].value) > 0 ? Number(els["pixels-per-foot"].value) : undefined,
+  };
 }
 
-async function runBenchmarkInspection(id) {
-  setBusy(true);
+async function loadSamples() {
   try {
-    const report = await api(`/api/inspect/benchmark/${id}`, { method: "POST" });
-    renderReport(report);
-  } catch (e) {
-    alert(e.message);
+    const samples = await api("/api/samples");
+    for (const s of samples) {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.label;
+      opt.dataset.url = s.url;
+      els.benchmark.appendChild(opt);
+    }
+  } catch { /* sample library unavailable; uploads still work */ }
+}
+
+// Samples are live-inspected inputs: rasterize the SVG in the browser, then
+// run the exact same live pipeline as an uploaded plan. No canned results.
+async function loadSample() {
+  const opt = els.benchmark.selectedOptions[0];
+  state.sampleId = els.benchmark.value;
+  state.planId = null;
+  if (!opt?.dataset.url) return;
+  const blob = await (await fetch(opt.dataset.url)).blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || 1000;
+    canvas.height = img.naturalHeight || 800;
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Upload the rasterized sample as a plan (S3 key); never keep base64 state.
+    const pngBlob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+    const form = new FormData();
+    form.append("file", pngBlob, `${state.sampleId || "sample"}.png`);
+    const data = await api("/api/plans/upload", { method: "POST", body: form });
+    state.planId = data.plan.id;
+    els["plan-img"].src = data.plan.url;
   } finally {
-    setBusy(false);
+    URL.revokeObjectURL(url);
   }
+  els["plan-img"].style.display = "block";
+  els["stage-empty"].classList.add("hidden");
+  runInspection();
 }
 
 async function uploadPlan(event) {
-  const file = event.target.files[0];
+  let file = event.target.files[0];
   if (!file) return;
+  // Rasterize SVG in the browser (vision models need pixels, not vectors);
+  // PDFs cannot be rasterized here — ask for a raster export instead.
+  if (file.type === "application/pdf") {
+    alert("PDF upload: please export the sheet as PNG or JPEG first — vision inspection needs a raster image.");
+    event.target.value = "";
+    return;
+  }
+  if (file.type.includes("svg")) {
+    try {
+      const url = URL.createObjectURL(file);
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = url;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || 1000;
+      canvas.height = img.naturalHeight || 800;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      file = await new Promise((r) => canvas.toBlob(r, "image/png"));
+      file.name = "floorplan.png";
+    } catch {
+      alert("Could not rasterize that SVG — please export it as PNG first.");
+      return;
+    }
+  }
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", file, file.name || "floorplan.png");
   try {
     const data = await api("/api/plans/upload", { method: "POST", body: form });
     state.planId = data.plan.id;
-    state.benchmarkId = "";
+    state.sampleId = "";
     els["plan-img"].src = data.plan.url;
     els["plan-img"].style.display = "block";
     els["stage-empty"].classList.add("hidden");
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = "";
-    bytes.forEach((b) => (binary += String.fromCharCode(b)));
-    state.imageBase64 = btoa(binary);
-    state.imageMime = file.type || "image/png";
   } catch (e) {
     alert(e.message);
   }
 }
 
 async function runInspection() {
-  if (state.benchmarkId) return runBenchmarkInspection(state.benchmarkId);
-  if (!state.planId && !state.imageBase64) return alert("Select a benchmark or upload a floorplan first.");
+  if (!state.planId) return alert("Select a sample or upload a floorplan first.");
   setBusy(true);
   try {
     const report = await api("/api/inspect", {
@@ -139,14 +193,23 @@ async function runInspection() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         planId: state.planId,
-        imageBase64: state.imageBase64 || undefined,
-        imageMime: state.imageMime,
-        occupancy: els.occupancy.value,
-        instruction: state.instruction,
-        transcript: state.instruction,
+        ...agentParams(),
       }),
     });
     renderReport(report);
+    // Closed loop without buttons: on HOLD, auto-generate redline + clean
+    // revised plan, then auto re-inspect the clean plan (once per inspection).
+    if (report.violations.length && report.source !== "redline" && state.autoFor !== report.inspectionId) {
+      state.autoFor = report.inspectionId;
+      const src = report;
+      setBusy(true);
+      try {
+        await generateRedline();
+        await reverify();
+        if (state.report && state.report !== src) activateTab("audit");
+      } catch { /* artifacts remain viewable/exportable even if re-inspection fails */ }
+      finally { setBusy(false); }
+    }
   } catch (e) {
     alert(e.message);
   } finally {
@@ -166,7 +229,13 @@ function renderReport(report) {
 
   els.violations.innerHTML = report.violations.length
     ? ""
-    : '<p class="muted">No violations — all sampled IBC / ADA / IRC checks pass.</p>';
+    : '<p class="muted">No verified violations in the live audit result.</p>';
+  for (const w of report.warnings ?? []) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = `Warning: ${w}`;
+    els.violations.appendChild(p);
+  }
   for (const v of report.violations) {
     const card = document.createElement("article");
     card.className = "card";
@@ -198,8 +267,17 @@ function renderReport(report) {
   }
 
   drawOverlays(report);
-  if (report.redlineImageBase64) {
-    els["redline-img"].src = `data:${report.redlineMime || "image/png"};base64,${report.redlineImageBase64}`;
+  const redlineSrc = report.redlineUrl || (report.redlineImageBase64 ? `data:${report.redlineMime || "image/png"};base64,${report.redlineImageBase64}` : "");
+  if (report.redlineUrl) state.redlineUrl = report.redlineUrl;
+  if (report.revisedUrl) {
+    state.revisedUrl = report.revisedUrl;
+    els["revised-img"].src = report.revisedUrl;
+    els["revised-img"].style.display = "block";
+    const rph = $("revised-placeholder");
+    if (rph) rph.style.display = "none";
+  }
+  if (redlineSrc) {
+    els["redline-img"].src = redlineSrc;
     els["redline-img"].style.display = "block";
     const ph = $("compare-placeholder");
     if (ph) ph.style.display = "none";
@@ -209,9 +287,11 @@ function renderReport(report) {
     const ph = $("compare-placeholder");
     if (ph) ph.style.display = "block";
   }
-  els.redline.disabled = report.status !== "HOLD";
-  els.reverify.disabled = true;
-  els.permit.disabled = report.status !== "APPROVED";
+  els["export-redline-img"].disabled = !state.redlineUrl;
+  els["export-clean-img"].disabled = !state.revisedUrl;
+  els["export-pkg"].disabled = !report.redlineKey && !report.revisedKey;
+  els.permit.disabled = false;
+  els["email-permit"].disabled = false;
   els.dataset.disabled = false;
 }
 
@@ -223,7 +303,13 @@ function drawOverlays(report) {
     const [x, y, x2, y2] = o.box_px;
     if (!x2 && !y2) continue;
     const color = o.compliant ? "#10b981" : "#ef4444";
-    html += `<g data-concept="${o.concept}"><rect x="${x}" y="${y}" width="${x2 - x}" height="${y2 - y}" fill="${color}" fill-opacity="0.14" stroke="${color}" stroke-width="2"/><text class="callout" x="${x + 6}" y="${y + 16}" fill="${color}">${o.concept} #${o.objectId}</text></g>`;
+    let mask = "";
+    if (o.svg_path && o.mask_w && o.mask_h) {
+      const sx = (x2 - x) / o.mask_w;
+      const sy = (y2 - y) / o.mask_h;
+      mask = `<path d="${o.svg_path}" transform="translate(${x} ${y}) scale(${sx} ${sy})" fill="${color}" fill-opacity="0.45" stroke="none"/>`;
+    }
+    html += `<g data-concept="${o.concept}"><rect x="${x}" y="${y}" width="${x2 - x}" height="${y2 - y}" fill="${color}" fill-opacity="0.14" stroke="${color}" stroke-width="2"/>${mask}<text class="callout" x="${x + 6}" y="${y + 16}" fill="${color}">${o.concept} #${o.objectId}</text></g>`;
   }
   for (const v of report.violations) {
     if (!layers.has("violation")) continue;
@@ -254,33 +340,41 @@ function applyLayers() {
     g.style.display = all || layers.has(concept) ? "" : "none";
   });
   els["compare-wrap"].classList.toggle("hidden", !layers.has("compare"));
+  els["revised-wrap"].classList.toggle("hidden", !layers.has("revised"));
 }
 
 async function generateRedline() {
   if (!state.report) return;
   setBusy(true);
   try {
+    // Dual generation: visual redline + clean revised plan (S3 keys + URLs only).
     const data = await api("/api/redline", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        inspectionId: state.report.inspectionId,
-        benchmarkId: state.benchmarkId || undefined,
-        imageBase64: state.benchmarkId ? undefined : state.imageBase64 || undefined,
-        mode: state.benchmarkId === "cafe-violation" ? "deterministic" : state.imageBase64 ? "live" : "deterministic",
-      }),
+      body: JSON.stringify({ inspectionId: state.report.inspectionId }),
     });
-    if (data.redlineImageBase64) {
-      els["redline-img"].src = `data:${data.redlineMime};base64,${data.redlineImageBase64}`;
+    if (data.redline?.url) {
+      state.redlineUrl = data.redline.url;
+      state.revisedUrl = data.revised?.url || "";
+      state.report.redlineKey = data.redline.key;
+      state.report.revisedKey = data.revised?.key;
+      els["redline-img"].src = data.redline.url;
       els["redline-img"].style.display = "block";
       const ph = $("compare-placeholder");
       if (ph) ph.style.display = "none";
+      if (state.revisedUrl) {
+        els["revised-img"].src = state.revisedUrl;
+        els["revised-img"].style.display = "block";
+        const rph = $("revised-placeholder");
+        if (rph) rph.style.display = "none";
+        document.querySelector('[data-layer="revised"]').checked = true;
+      }
       document.querySelector('[data-layer="compare"]').checked = true;
       applyLayers();
     }
-    if (data.reverifiedReport) renderReport(data.reverifiedReport);
-    els.reverify.disabled = false;
-    if (data.reverifiedReport) activateTab("audit");
+    els["export-redline-img"].disabled = !state.redlineUrl;
+    els["export-clean-img"].disabled = !state.revisedUrl;
+    els["export-pkg"].disabled = false;
   } catch (e) {
     alert(e.message);
   } finally {
@@ -288,17 +382,70 @@ async function generateRedline() {
   }
 }
 
+async function exportImage(url, kind) {
+  if (!url) return;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `planpass-${kind}-${state.report?.inspectionId ?? "plan"}.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function exportPackage() {
+  if (!state.report) return;
+  try {
+    const pkg = await api(`/api/inspections/${state.report.inspectionId}/package`);
+    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `planpass-package-${state.report.inspectionId}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
 async function reverify() {
-  if (state.benchmarkId || state.report?.source === "redline") {
-    const data = await api("/api/redline", {
+  // Re-inspect the CLEAN REVISED plan (no markup), never the redline image.
+  if (!state.revisedUrl && !state.report?.revisedKey) return alert("Generate the redline + clean revised plan first, then re-inspect the clean plan.");
+  setBusy(true);
+  try {
+    const { concepts, pixelsPerFoot, occupancy } = agentParams();
+    const report = await api("/api/reverify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ benchmarkId: "cafe-violation", mode: "deterministic", inspectionId: state.report?.inspectionId }),
+      body: JSON.stringify({ inspectionId: state.report?.inspectionId, concepts, pixelsPerFoot, occupancy }),
     });
-    if (data.reverifiedReport) renderReport(data.reverifiedReport);
-    return;
+    // Keep the comparison view pointing at the generated artifacts.
+    report.redlineUrl = state.redlineUrl || report.redlineUrl;
+    report.revisedUrl = state.revisedUrl || report.revisedUrl;
+    renderReport(report);
+    activateTab("audit");
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setBusy(false);
   }
-  runInspection();
+}
+
+async function emailPermit() {
+  if (!state.report) return;
+  try {
+    const data = await api(`/api/inspections/${state.report.inspectionId}/email-permit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    alert(data.sent ? `Permit packet emailed (id: ${data.id ?? "n/a"})` : `Email not sent: ${data.error ?? "unknown"}`);
+  } catch (e) {
+    alert(`Email failed: ${e.message}`);
+  }
 }
 
 async function loadHistory() {
@@ -318,13 +465,6 @@ async function loadHistory() {
             const plan = await api(`/api/plans/${row.plan_id}`).catch(() => null);
             if (plan?.url) {
               els["plan-img"].src = plan.url;
-              els["plan-img"].style.display = "block";
-              els["stage-empty"].classList.add("hidden");
-            }
-          } else if (report.planId) {
-            const file = { "cafe-violation": "cafe-violation.svg", "cafe-compliant": "cafe-compliant.svg", "residential-adu": "residential-adu.svg" }[report.planId];
-            if (file) {
-              els["plan-img"].src = `/benchmarks/${file}`;
               els["plan-img"].style.display = "block";
               els["stage-empty"].classList.add("hidden");
             }
@@ -356,7 +496,6 @@ async function signOut() {
 
 function setBusy(busy) {
   els.inspect.disabled = busy;
-  els.redline.disabled = busy || state.report?.status !== "HOLD";
 }
 
 function escapeHtml(s) {

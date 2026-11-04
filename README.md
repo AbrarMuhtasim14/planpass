@@ -46,13 +46,10 @@ flowchart TD
 
 ## ⚡ Key Features (MoSCoW P0 & P1)
 
-* **F1: Blueprint Ingestion & Benchmark Suite (P0):** Drag-and-drop support for PNG, JPEG, WebP, and single-page PDFs, plus 3 pre-loaded architectural CAD benchmark floorplans:
-  * *Commercial Cafe — Violation State* (Score: 42%, Status: `HOLD`)
-  * *Commercial Cafe — Compliant State* (Score: 98%, Status: `APPROVED`)
-  * *Residential ADU Layout* (Score: 96%, Status: `APPROVED`)
+* **F1: Blueprint Ingestion & Sample Library (P0):** Drag-and-drop support for PNG, JPEG, WebP, and single-page PDFs, plus 3 pre-loaded sample floorplans. Samples are inputs only — every score, violation, overlay, and verdict is produced live by the 4-node pipeline from the actual image; nothing is precomputed.
 * **F2: Voice-First Inspection Scope Bar (P0):** Push-to-talk audio recorder with real-time waveform visualization powered by `muse-voice-transcribe-1.0` and preset scope chips.
-* **F3: Pixel-Accurate Element Segmentation (P0):** Concurrent `sam-3.1` noun segmentation for `door`, `corridor`, `bathroom`, and `room` rendered as interactive SVG overlays.
-* **F4: Spatial Grounding & FastMCP Statutory Audit (P0):** Verbatim cross-examination of floorplan dimensions against **IBC 2024** and **ADA Standards for Accessible Design 2010**. Zero hallucinated code citations.
+* **F3: Pixel-Accurate Element Segmentation (P0):** Concurrent `sam-3.1` segmentation for agent-proposed or caller-supplied concepts (no fixed list) rendered as interactive SVG overlays.
+* **F4: Spatial Grounding & Statutory Audit (P0):** Cross-examination of floorplan dimensions against the runtime statute corpus in `data/statutes.json` (IBC 2024 / ADA 2010 / IRC, editable via `STATUTES_FILE`). Unverifiable citations are dropped with a warning — never silently trusted.
 * **F5: Permit Readiness Score & Violation Ledger (P0):** Real-time 0–100% readiness gauge, pass/hold gate, and structured violation cards.
 * **F6: Generative Architectural Redlining (P0):** One-click visual redline generation using `muse-image-1.0` that preserves existing wall geometry while overlaying crisp red architectural markups.
 * **F7: Closed-Loop Re-Verification (P0):** Re-runs fixed plans through the examiner to verify that violations are resolved and unlock final PE sign-off.

@@ -42,6 +42,8 @@ export async function initDb(): Promise<void> {
         readiness_score INTEGER NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
+      ALTER TABLE plans ADD COLUMN IF NOT EXISTS sha256 TEXT;
+      CREATE INDEX IF NOT EXISTS plans_sha256_idx ON plans(sha256);
       CREATE INDEX IF NOT EXISTS inspections_user_id_idx ON inspections(user_id);
       CREATE INDEX IF NOT EXISTS inspections_created_at_idx ON inspections(created_at DESC);
     `);

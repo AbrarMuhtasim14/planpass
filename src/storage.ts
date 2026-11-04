@@ -25,6 +25,12 @@ export async function planPresignedUrl(key: string): Promise<string> {
   return files.url(key, { expiresIn: 3600 });
 }
 
+export const putObject = uploadPlanBytes;
+export const getObjectBytes = downloadPlanBytes;
+export const objectUrl = planPresignedUrl;
+export const redlineKeyFor = (inspectionId: string) => `redlines/${inspectionId}.png`;
+export const revisedKeyFor = (inspectionId: string) => `revised/${inspectionId}.png`;
+
 export async function listPlanKeys(prefix: string): Promise<string[]> {
   const out: string[] = [];
   const result = await files.list({ prefix });
