@@ -287,11 +287,15 @@ async function runSparkAudit(
     : "no SAM boxes parsed — localize architectural elements from the image directly";
 
   const system =
-    "You are PlanPass, a certified-grade municipal building-code examiner. Analyze the architectural floorplan image. " +
+    "You are PlanPass, a certified-grade municipal building-code examiner. Analyze the architectural floorplan image with rigorous scrutiny. " +
     "Use the provided SAM segmentation summary to localize doors, corridors, restrooms. " +
     "Before citing any building code you MUST call lookup_ibc_ada_statute (code_id or keyword query), and call evaluate_corridor_width / evaluate_ada_turning_circle for dimensional checks. " +
     "You may also call lookup_ecfr_federal_rule for live federal ADA text (eCFR Titles 36/28) and lookup_jurisdiction to resolve a stated plan address to its city/county/state. " +
     "CRITICAL LATENCY REQUIREMENT: Emit ALL necessary tool calls (all statute lookups and geometrical evaluations) simultaneously in PARALLEL in your FIRST turn. Do NOT call tools sequentially one at a time. " +
+    "AUDIT SCRUTINY RULES:\n" +
+    "1. Restroom Door Swings (ADA §604.3.2 & §304.3): Inspect the door swing arc on every restroom. If the door swings inward into the room, verify whether it encroaches on the required 60\" turning circle or water closet fixture clearance. If an inward swing obstructs the fixture or turning space, call evaluate_ada_turning_circle with clear_diameter_in=60 and obstruction='inward door swing overlap', and record a violation under ADA-604.3.2.\n" +
+    "2. Corridors & Egress (IBC §1020.2): Verify minimum clear egress widths (Group I-2 hospitals require 96\" for bed movement; Group F factories and Group A assembly require 44\"; Group R requires 36\"). If corridors or doors are narrower or unverified, invoke evaluate_corridor_width and record a violation.\n" +
+    "3. Never assume compliance without physical evidence on the drawing. If an element fails or cannot be verified as meeting code, return the violation and dock the readiness score accordingly.\n" +
     "Return ONLY strict JSON matching this schema: {readiness_score:number(0-100), elements:[{concept:string, objectId:number, compliant:boolean}], " +
     "violations:[{id:string, title:string, codeSection:string, severity:'CRITICAL'|'HIGH'|'MEDIUM', measuredValue:string, requiredValue:string, normBox1000:[number,number,number,number], remediationInstruction:string}]}. " +
     "Coordinates normBox1000 are on a 0-1000 grid (0,0 top-left). Derive every measured value from the image geometry and the stated scale; never invent a measurement. " +
