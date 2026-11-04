@@ -1,13 +1,21 @@
 import { readFile } from "node:fs/promises";
 
 const BASE = "http://localhost:3000";
+// Credentials come from the environment — never hard-code secrets in this repo.
+// Usage: TEST_EMAIL=you@example.com TEST_PASSWORD=... node scripts/test-live-upload.mjs
+const TEST_EMAIL = process.env.TEST_EMAIL ?? "";
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "";
+if (!TEST_EMAIL || !TEST_PASSWORD) {
+  console.error("Set TEST_EMAIL and TEST_PASSWORD environment variables before running this script.");
+  process.exit(1);
+}
 
 async function main() {
   console.log("=== STEP 1: Authenticate with Neon Auth ===");
   const loginRes = await fetch(`${BASE}/api/auth/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-    body: JSON.stringify({ email: "abrarmohtasim14@gmail.com", password: "12345678" }),
+    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
   });
   console.log("Sign-in status:", loginRes.status);
   const setCookie = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];

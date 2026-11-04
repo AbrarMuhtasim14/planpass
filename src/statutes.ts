@@ -44,7 +44,7 @@ const DEFAULT_CORPUS: StatuteCorpus = {
     {
       codeId: "IBC-1020.2",
       title: "Corridor Fire-Resistance Rating / Width",
-      text: "IBC 2024 Section 1020.2 (Table 1020.2): Corridors in Group A (assembly) occupancies serving an occupant load greater than 30 shall have a minimum clear width of 44 inches (1118 mm). Corridors in Group R occupancies shall have a minimum clear width of 36 inches (914 mm).",
+      text: "IBC 2024 Section 1020.2 (Table 1020.2): Corridors in Group I-2 (hospitals and healthcare facilities) serving patient rooms, emergency suites, and bed movement shall have a minimum clear width of 96 inches (2438 mm). Corridors in Group E (educational / schools) occupancies serving an occupant load greater than 100 shall have a minimum clear width of 72 inches (1829 mm). Corridors in Group A (assembly) occupancies serving an occupant load greater than 30 shall have a minimum clear width of 44 inches (1118 mm). Corridors in Group R occupancies shall have a minimum clear width of 36 inches (914 mm).",
     },
     {
       codeId: "IRC-R310.1",
@@ -59,6 +59,8 @@ const DEFAULT_CORPUS: StatuteCorpus = {
   ],
   rules: {
     corridorWidth: [
+      { occupancies: ["hospital", "institutional", "group i", "i-2", "healthcare"], requiredIn: 96, statuteCodeId: "IBC-1020.2" },
+      { occupancies: ["school", "education", "educational", "group e", "e-", "academy"], requiredIn: 72, statuteCodeId: "IBC-1020.2" },
       { occupancies: ["assembly", "commercial", "cafe", "group a", "a-"], requiredIn: 44, statuteCodeId: "IBC-1020.2" },
       { occupancies: ["residential", "group r", "r-"], requiredIn: 36, statuteCodeId: "IBC-1020.2" },
       { occupancies: ["factory", "industrial", "group f", "f-1", "f-2", "*"], requiredIn: 44, statuteCodeId: "IBC-1020.2" },

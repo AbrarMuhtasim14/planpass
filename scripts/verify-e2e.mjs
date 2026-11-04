@@ -69,22 +69,34 @@ async function json(path, opts = {}) {
   var userId = me.data.user?.id;
 }
 
-// 3. Benchmark cached audits (deterministic, PRD §7)
-async function bench(id, score, status, violCount) {
-  const { res, data } = await json(`/api/inspect/benchmark/${id}`, { method: "POST" });
-  check(`benchmark ${id}`, res.status === 200 && data.readinessScore === score && data.status === status && (data.violations?.length ?? -1) === violCount,
-    `score=${data.readinessScore} status=${data.status} violations=${data.violations?.length}`);
-  return data;
+// 3. Samples are inputs only; canned benchmark route is gone; live inspect is real.
+{
+  const samples = JSON.parse(await (await fetch(BASE + "/api/samples")).text());
+  check("samples carry no canned verdicts", Array.isArray(samples) && samples.length === 3 && samples.every((s) => !("readinessScore" in s) && !("violations" in s) && !("samOverlays" in s)), `count=${samples.length}`);
+  const gone = await json("/api/inspect/benchmark/cafe-violation", { method: "POST" });
+  check("canned benchmark inspection removed", gone.res.status === 404, `status=${gone.res.status}`);
 }
-const v = await bench("cafe-violation", 42, "HOLD", 2);
-await bench("cafe-compliant", 98, "APPROVED", 0);
-await bench("residential-adu", 96, "APPROVED", 0);
-check("violation citations", v.violations?.[0]?.codeSection?.includes("604.3.2") && v.violations?.[1]?.codeSection?.includes("1020.2"), v.violations?.map(x=>x.codeSection).join(" | "));
+const png = await readFile("test_floorplan.png");
+const live = await json("/api/inspect", {
+  method: "POST", headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    imageBase64: Buffer.from(png).toString("base64"), imageMime: "image/png",
+    occupancy: "Commercial Assembly", instruction: "Check corridor egress and ADA turning space",
+    concepts: ["door", "corridor", "bathroom", "room"],
+  }),
+});
+const v = live.data;
+check("live inspection (SAM+Spark, real result)", live.res.status === 200 && !!v.inspectionId && Array.isArray(v.violations) && Array.isArray(v.samOverlays) && Array.isArray(v.mcpTrace),
+  `score=${v.readinessScore} status=${v.status} violations=${v.violations?.length} overlays=${v.samOverlays?.length}`);
+check("status consistent with violations", (v.violations?.length === 0 && v.status === "APPROVED") || (v.violations?.length > 0 && v.status === "HOLD"), `status=${v.status}`);
+check("no fabricated zero boxes", !(v.samOverlays ?? []).some((o) => o.box_px?.[2] === 0 && o.box_px?.[3] === 0), `overlays=${v.samOverlays?.length}`);
 
-// 4. Statute dictionary (deterministic MCP source)
+// 4. Runtime statute corpus (data/statutes.json)
 {
   const { data } = await json("/api/statutes/ADA-604.3.2");
   check("statute lookup ADA-604.3.2", String(data.text || "").includes("door swing does not overlap"), (data.title || ""));
+  const all = await json("/api/statutes");
+  check("statute corpus endpoint", (all.data.statutes?.length ?? 0) >= 6, `count=${all.data.statutes?.length}`);
 }
 
 // 5. Upload floorplan -> Neon S3 assets bucket + plans row + presigned URL
@@ -107,7 +119,7 @@ let planId = null;
 // 6. History persisted in Neon Postgres + Realtime sealed query
 {
   const hist = await json("/api/inspections");
-  check("inspection history (Postgres)", hist.res.status === 200 && (hist.data.inspections?.length ?? 0) >= 3, `rows=${hist.data.inspections?.length}`);
+  check("inspection history (Postgres)", hist.res.status === 200 && (hist.data.inspections?.length ?? 0) >= 1, `rows=${hist.data.inspections?.length}`);
   const live = await json("/api/inspections/live", { method: "POST" });
   check("realtime sealed query", live.res.status === 200 && !!live.data.capability && !!live.data.expiresAt, `expiresAt=${live.data.expiresAt}`);
 }
@@ -123,14 +135,29 @@ let planId = null;
   check("JSONL dataset", jl.status === 200 && txt.includes(v.inspectionId), `bytes=${txt.length}`);
 }
 
-// 8. Closed-loop redline + re-verification (deterministic benchmark path)
+// 8. No deterministic shortcuts: redline/reverify must use real images/results.
 {
-  const { res, data } = await json("/api/redline", {
+  const det = await json("/api/redline", {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ inspectionId: v.inspectionId, benchmarkId: "cafe-violation", mode: "deterministic" }),
   });
-  check("redline + re-verify", res.status === 200 && data.reverifiedReport?.readinessScore === 98 && data.reverifiedReport?.status === "APPROVED" && !!data.redlineImageBase64,
-    `score=${data.reverifiedReport?.readinessScore} status=${data.reverifiedReport?.status}`);
+  check("deterministic redline shortcut removed", det.res.status === 400 && !det.data.reverifiedReport, `status=${det.res.status}`);
+  const noRed = await json("/api/reverify", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ inspectionId: v.inspectionId, benchmarkId: "cafe-violation" }),
+  });
+  check("deterministic reverify shortcut removed", noRed.res.status === 400, `status=${noRed.res.status}`);
+  // Dual-generation package + key-only storage (no live generation in e2e).
+  const pkg = await json(`/api/inspections/${v.inspectionId}/package`);
+  check("export package shape", pkg.res.status === 200 && pkg.data.cleanPlan === null && Array.isArray(pkg.data.redlinePackage?.violations),
+    `status=${pkg.res.status} cleanPlan=${pkg.data.cleanPlan}`);
+  const stored = await json(`/api/inspections/${v.inspectionId}`);
+  check("report stores keys not base64", stored.res.status === 200 && !("redlineImageBase64" in stored.data) && stored.text.length < 20000,
+    `bytes=${stored.text.length}`);
+  const em404 = await json(`/api/inspections/insp_missing/email-permit`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
+  });
+  check("email unknown inspection -> 404", em404.res.status === 404, `status=${em404.res.status}`);
 }
 
 // 9. Second user isolation (cross-user history must be empty of first user's rows)

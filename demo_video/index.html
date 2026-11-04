@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PlanPass — Product Demo Video</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #030712;
+        --card-bg: rgba(15, 23, 42, 0.85);
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --cyan: #38bdf8;
+        --blue: #2563eb;
+        --emerald: #10b981;
+        --amber: #f59e0b;
+        --rose: #f43f5e;
+        --border: rgba(56, 189, 248, 0.25);
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text);
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 20%, #0f172a 0%, #030712 100%);
+      }
+      
+      /* Subtle CAD grid overlay */
+      .cad-grid {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+      }
+
+      /* Fixed Header Banner across all scenes */
+      .top-banner {
+        position: absolute;
+        top: 24px;
+        left: 48px;
+        right: 48px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0 24px;
+        z-index: 100;
+      }
+      .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .logo-box {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #0284c7, #2563eb);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 18px;
+        color: #fff;
+        letter-spacing: -0.05em;
+      }
+      .brand-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.02em;
+      }
+      .brand-tag {
+        font-size: 13px;
+        color: var(--cyan);
+        margin-left: 8px;
+        font-weight: 500;
+      }
+      .hackathon-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(37, 99, 235, 0.2);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #60a5fa;
+      }
+
+      /* Scene Containers */
+      .scene {
+        position: absolute;
+        top: 110px;
+        left: 48px;
+        right: 48px;
+        bottom: 36px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Scene 1: Problem Title Card */
+      .hero-card {
+        text-align: center;
+        max-width: 1200px;
+      }
+      .hero-eyebrow {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--cyan);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 16px;
+      }
+      .hero-h1 {
+        font-size: 68px;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        margin-bottom: 24px;
+        background: linear-gradient(135deg, #ffffff 30%, #93c5fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .hero-subtitle {
+        font-size: 24px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        max-width: 900px;
+        margin: 0 auto 40px auto;
+      }
+      .problem-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        text-align: left;
+        margin-top: 20px;
+      }
+      .stat-card {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(244, 63, 94, 0.3);
+        border-radius: 14px;
+        padding: 24px;
+      }
+      .stat-val {
+        font-size: 38px;
+        font-weight: 800;
+        color: var(--rose);
+        margin-bottom: 8px;
+      }
+      .stat-desc {
+        font-size: 16px;
+        color: #cbd5e1;
+        line-height: 1.4;
+      }
+
+      /* Scene 2: 4-Node Architecture */
+      .arch-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .section-badge {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--cyan);
+        background: rgba(14, 165, 233, 0.15);
+        border: 1px solid var(--border);
+        padding: 6px 16px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .arch-title {
+        font-size: 42px;
+        font-weight: 800;
+        margin-bottom: 36px;
+        text-align: center;
+      }
+      .nodes-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        width: 100%;
+      }
+      .node-card {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+      .node-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--cyan);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .node-name {
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .node-model {
+        font-size: 13px;
+        font-family: monospace;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.15);
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+      }
+      .node-desc {
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      /* Screenshot Showcase Layouts */
+      .showcase-layout {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 32px;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+      }
+      .screenshot-frame {
+        width: 100%;
+        height: 820px;
+        background: #000;
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        position: relative;
+      }
+      .screenshot-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top left;
+      }
+      .info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .info-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+        width: fit-content;
+      }
+      .info-badge.blue {
+        background: rgba(37, 99, 235, 0.2);
+        color: #60a5fa;
+        border: 1px solid #3b82f6;
+      }
+      .info-badge.amber {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid #f59e0b;
+      }
+      .info-badge.emerald {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid #10b981;
+      }
+      .info-title {
+        font-size: 36px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+      }
+      .info-desc {
+        font-size: 18px;
+        color: #cbd5e1;
+        line-height: 1.6;
+      }
+      .callout-box {
+        background: rgba(15, 23, 42, 0.9);
+        border-left: 4px solid var(--cyan);
+        border-radius: 0 10px 10px 0;
+        padding: 16px 20px;
+        font-size: 15px;
+        color: #e2e8f0;
+      }
+      .callout-box.amber {
+        border-left-color: var(--amber);
+      }
+      .callout-box.emerald {
+        border-left-color: var(--emerald);
+      }
+
+      /* Outro Scene */
+      .outro-card {
+        text-align: center;
+        max-width: 1100px;
+      }
+      .meta-logo-glow {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+      .deploy-pill-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 32px;
+      }
+      .deploy-pill {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid var(--border);
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+      .live-url {
+        font-family: monospace;
+        color: var(--cyan);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="108.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div class="cad-grid"></div>
+
+      <!-- Top Branding Bar -->
+      <header class="top-banner">
+        <div class="brand-group">
+          <div class="logo-box">PP</div>
+          <div class="brand-title">PlanPass</div>
+          <span class="brand-tag">AI Municipal Blueprint &amp; Code Compliance Examiner</span>
+        </div>
+        <div class="hackathon-pill">
+          <span>⚡</span> Built for Meta AI Developer Hackathon 2026
+        </div>
+      </header>
+
+      <!-- AUDIO TRACKS -->
+      <audio id="snd-s1" src="assets/scene1_problem.mp3" data-start="0" data-duration="16.7"></audio>
+      <audio id="snd-s2" src="assets/scene2_architecture.mp3" data-start="16.7" data-duration="20.8"></audio>
+      <audio id="snd-s3" src="assets/scene3_universal_login.mp3" data-start="37.5" data-duration="15.9"></audio>
+      <audio id="snd-s4" src="assets/scene4_inspection_violations.mp3" data-start="53.4" data-duration="23.6"></audio>
+      <audio id="snd-s5" src="assets/scene5_redlines_approval.mp3" data-start="77.0" data-duration="17.0"></audio>
+      <audio id="snd-s6" src="assets/scene6_outro.mp3" data-start="94.0" data-duration="14.5"></audio>
+
+      <!-- SCENE 1: Problem & Mission (0s - 16.7s) -->
+      <section id="scene-1" class="scene clip" data-hold data-start="0" data-duration="16.7" data-track-index="1">
+        <div class="hero-card">
+          <div class="hero-eyebrow">The Municipal Permitting Bottleneck</div>
+          <h1 class="hero-h1">Automating Commercial Blueprint Compliance with Meta Multimodal AI</h1>
+          <p class="hero-subtitle">
+            Municipal building code examinations take 4 to 8 weeks per revision, delaying critical housing and commercial developments while subtle accessibility violations slip past human review.
+          </p>
+          <div class="problem-grid">
+            <div class="stat-card">
+              <div class="stat-val">4 to 8 Weeks</div>
+              <div class="stat-desc">Average wait time for initial municipal architectural plan review, costing projects thousands daily in carry costs.</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val">&gt; 35% Errors</div>
+              <div class="stat-desc">Manual plan examiners miss wheelchair door-swing overlaps (ADA §604) and insufficient clear egress corridor widths (IBC §1020).</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 2: The 4-Node Architecture (16.7s - 37.5s) -->
+      <section id="scene-2" class="scene clip" data-hold data-start="16.7" data-duration="20.8" data-track-index="1">
+        <div class="arch-container">
+          <div class="section-badge">Meta Multimodal Vision Pipeline</div>
+          <h2 class="arch-title">Closed-Loop 4-Node Autonomous Architecture</h2>
+          <div class="nodes-row">
+            <div class="node-card">
+              <div class="node-num">Node 1: Voice Scope</div>
+              <div class="node-name">Speech-to-Scope ASR</div>
+              <div class="node-model">muse-voice-transcribe-1.0</div>
+              <div class="node-desc">Real-time Push-to-Talk audio transcription captures reviewer intent, scope, and occupancy parameters.</div>
+            </div>
+            <div class="node-card">
+              <div class="node-num">Node 2: Spatial Vision</div>
+              <div class="node-name">Architectural SAM</div>
+              <div class="node-model">sam-3.1 streaming</div>
+              <div class="node-desc">Zero-shot segmentation of architectural primitives: doors, corridors, compartments, and fixture clear spaces.</div>
+            </div>
+            <div class="node-card">
+              <div class="node-num">Node 3: Code Reasoner</div>
+              <div class="node-name">Statutory FastMCP</div>
+              <div class="node-model">muse-spark-1.3</div>
+              <div class="node-desc">Rigorous multi-turn tool calling against IBC/ADA statutes, live eCFR federal rules, and turning geometry verification.</div>
+            </div>
+            <div class="node-card">
+              <div class="node-num">Node 4: Generative Linework</div>
+              <div class="node-name">Visual Redline &amp; Clean CAD</div>
+              <div class="node-model">muse-image-1.0</div>
+              <div class="node-desc">Dual generation: professional markup callouts for drafters plus clean revised blueprint linework for re-audit.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 3: Universal Judge Access & Studio (37.5s - 53.4s) -->
+      <section id="scene-3" class="scene clip" data-hold data-start="37.5" data-duration="15.9" data-track-index="1">
+        <div class="showcase-layout">
+          <div class="screenshot-frame">
+            <img src="assets/step_01_auth_page.png" alt="Judge Fast-Pass Login" />
+          </div>
+          <div class="info-panel">
+            <div class="info-badge blue">⚡ Instant Judge Fast-Pass</div>
+            <h2 class="info-title">Universal 1-Click Evaluation for Hackathon Judges</h2>
+            <p class="info-desc">
+              Pre-seeded universal credentials allow judges to bypass sign-up friction with a single click and access the full examination studio immediately.
+            </p>
+            <div class="callout-box">
+              <strong>Universal Credentials:</strong><br />
+              Email: <code>judge@hackathon.meta.ai</code><br />
+              Password: <code>MetaHackathon2026!</code>
+            </div>
+            <div class="callout-box">
+              <strong>Studio Features:</strong> Free-form occupancy calibration, scale px/ft input, live push-to-talk voice bar, and multi-layer CAD viewport controls.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 4: Live Inspection & Statutory Violations (53.4s - 77.0s) -->
+      <section id="scene-4" class="scene clip" data-hold data-start="53.4" data-duration="23.6" data-track-index="1">
+        <div class="showcase-layout">
+          <div class="screenshot-frame">
+            <img src="assets/step_04_audit_ledger_violation.png" alt="Compliance Audit Ledger" />
+          </div>
+          <div class="info-panel">
+            <div class="info-badge amber">⚠️ Statutory Violation Identified</div>
+            <h2 class="info-title">Lincoln High School STEM Academy (Group E)</h2>
+            <p class="info-desc">
+              SAM 3.1 segmentations and Meta Spark 1.3 statute reasoning execute concurrently over the CAD blueprint, evaluating IBC §1020.2 corridor widths and ADA §604 restroom clearances.
+            </p>
+            <div class="callout-box amber">
+              <strong>Violation V-01 (ADA §604.3.2):</strong><br />
+              Inward door swing arc overlaps required 60-inch wheelchair turning circle and water closet clearance.
+            </div>
+            <div class="callout-box">
+              <strong>Readiness Score: 82% — HOLD (Revisions Required)</strong><br />
+              Anti-hallucination guardrails drop unverifiable citations; only physically proven geometric non-compliances are penalized.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 5: Generative Redlines, Re-Audit & Approval (77.0s - 94.0s) -->
+      <section id="scene-5" class="scene clip" data-hold data-start="77.0" data-duration="17.0" data-track-index="1">
+        <div class="showcase-layout">
+          <div class="screenshot-frame">
+            <img src="assets/step_06_side_by_side_redline_and_clean_plan.png" alt="Generative Redline and Clean Revision" />
+          </div>
+          <div class="info-panel">
+            <div class="info-badge emerald">✅ Closed-Loop Re-Inspection</div>
+            <h2 class="info-title">Dual Generative Linework &amp; 100% PE Sign-Off</h2>
+            <p class="info-desc">
+              Node 4 (Muse Image 1.0) generates side-by-side architectural markup callouts plus a clean revised blueprint with outward door swings baked into the vector linework.
+            </p>
+            <div class="callout-box emerald">
+              <strong>Automated Closed-Loop Re-Verification:</strong><br />
+              The clean revision is automatically re-audited by SAM 3.1 &amp; Spark 1.3, achieving a <strong>100% Permit Readiness Score</strong>.
+            </div>
+            <div class="callout-box">
+              <strong>Permit Actions Enabled:</strong><br />
+              Download Stamped Permit PDF, Email Permit Packet, and Export Air-Gapped JSONL Dataset.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 6: Outro & Hackathon Compliance (94.0s - 108.5s) -->
+      <section id="scene-6" class="scene clip" data-hold data-start="94.0" data-duration="14.5" data-track-index="1">
+        <div class="outro-card">
+          <div class="meta-logo-glow">♾️</div>
+          <div class="section-badge">Meta AI Developer Hackathon 2026</div>
+          <h2 class="hero-h1">100% Original Code Built for the Event</h2>
+          <p class="hero-subtitle">
+            PlanPass connects Meta’s frontier multimodal models with verified municipal statutory engineering to slash permit review cycles from weeks to seconds.
+          </p>
+          <div class="deploy-pill-row">
+            <div class="deploy-pill">Frontend &amp; Serverless: <strong>Vercel (Global Edge)</strong></div>
+            <div class="deploy-pill">Database: <strong>Neon PostgreSQL &amp; Auth</strong></div>
+            <div class="deploy-pill">Storage: <strong>AWS S3 Secure Buckets</strong></div>
+          </div>
+          <div style="margin-top: 28px;">
+            <p style="font-size: 22px; color: #94a3b8;">
+              Test the live application right now at: <span class="live-url">https://planpass-zeta.vercel.app</span>
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      // Scene 1 Animation
+      tl.fromTo("#scene-1 .hero-eyebrow", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 0.5)
+        .fromTo("#scene-1 .hero-h1", { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 1, ease: "power2.out" }, 1.0)
+        .fromTo("#scene-1 .hero-subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 2.0)
+        .fromTo("#scene-1 .problem-grid", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 3.5);
+
+      // Scene 2 Animation (4-Node Architecture)
+      tl.fromTo("#scene-2 .section-badge", { opacity: 0, y: -15 }, { opacity: 1, y: 0, duration: 0.6 }, 17.5)
+        .fromTo("#scene-2 .arch-title", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.8 }, 18.2)
+        .fromTo("#scene-2 .node-card", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.35, ease: "back.out(1.2)" }, 19.5);
+
+      // Scene 3 Animation (Universal Judge Access)
+      tl.fromTo("#scene-3 .screenshot-frame", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.8, ease: "power2.out" }, 38.5)
+        .fromTo("#scene-3 .info-panel", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.8, ease: "power2.out" }, 39.0);
+
+      // Scene 4 Animation (Live Inspection Violations)
+      tl.fromTo("#scene-4 .screenshot-frame", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power2.out" }, 54.5)
+        .fromTo("#scene-4 .info-panel", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.8, ease: "power2.out" }, 55.2);
+
+      // Scene 5 Animation (Redlines & 100% Approval)
+      tl.fromTo("#scene-5 .screenshot-frame", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power2.out" }, 78.5)
+        .fromTo("#scene-5 .info-panel", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.8, ease: "power2.out" }, 79.2);
+
+      // Scene 6 Animation (Outro & Open Source)
+      tl.fromTo("#scene-6 .meta-logo-glow", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.5)" }, 96.5)
+        .fromTo("#scene-6 .hero-h1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8 }, 97.5)
+        .fromTo("#scene-6 .deploy-pill", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.2 }, 99.0);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
