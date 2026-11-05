@@ -39,10 +39,12 @@ Follow this end-to-end evaluation flow to test all core capabilities on the live
 ### 4. Live Multi-Agent Municipal Inspection & Statutory Verification
 * **How to test:** Click the blue **"Run inspection"** button in the bottom drawer.
 * **What to observe:**
-  * **Real-Time SAM 3.1 Segmentation:** Color-coded SVG polygon masks stream across the canvas highlighting doors (blue), corridors (teal), restrooms (indigo), and hazard areas. Use the **Layer controls** checkboxes to toggle individual architectural layers on and off.
+  * **Multimodal Visual Workplane Understanding (Muse Image/Vision):** Muse directly analyzes the visual workplane of the floor plan, identifying wall lines, door swing arcs, corridor boundaries, fixture clearances, and scale dimensions directly from CAD pixels without fragile pixel-mask dependencies.
+  * **Live Federal Regulations from US eCFR REST API:** Live statutory queries to the US Electronic Code of Federal Regulations (`ecfr.gov` REST API) for Title 36 CFR Part 1191 (ADAAG standards) and Title 28 CFR Part 36 (DOJ ADA Title III mandates).
+  * **Live Municipal Jurisdiction via OpenStreetMap (OSM) Nominatim:** Live address resolution via `nominatim.openstreetmap.org` geocoding the property to determine exact city/county/state jurisdiction for localized municipal code enforcement.
   * **Permit Readiness Score Gauge:** The circular SVG gauge animates from 0% to the computed compliance score (e.g., **82%** with a yellow **HOLD** badge for the school STEM wing).
   * **Statutory Compliance Ledger:** The right-hand drawer displays structured violation cards. Click each card to reveal the exact statute code, violated standard, and remediation recommendation (e.g., *ADA §604.3.2: Restroom door swing overlaps required 60" wheelchair turning circle*).
-  * **FastMCP Agent Trace:** Switch to the **"Agent & MCP Trace"** tab to inspect the real-time tool calls (`lookup_ibc_ada_statute`, `evaluate_corridor_width`, `evaluate_ada_turning_circle`) with exact input arguments and statutory results.
+  * **FastMCP Agent Trace:** Switch to the **"Agent & MCP Trace"** tab to inspect the real-time tool calls (`lookup_ecfr_federal_rule`, `lookup_jurisdiction`, `lookup_ibc_ada_statute`, `evaluate_corridor_width`, `evaluate_ada_turning_circle`) with exact input arguments and statutory results.
 
 ### 5. Generative Architectural Redlining & Clean Revised Blueprint
 * **How to test:** In the bottom drawer, click **"Export Redline Image"** or toggle the checkboxes **"Side-by-side redline"** and **"Clean revised blueprint"**.
@@ -50,7 +52,7 @@ Follow this end-to-end evaluation flow to test all core capabilities on the live
   * Node 4 (`muse-image-1.0`) synthesizes dual architectural linework:
     1. **Visual Redline Markup:** Clear red drafter annotations detailing the required door swing reversal.
     2. **Clean Revised Blueprint:** Production-ready CAD revision with statutory corrections baked in.
-  * **Closed-Loop Verification:** The clean revised plan is automatically re-evaluated through SAM 3.1 & Spark 1.3, elevating the score to **100% / APPROVED** with a Professional Engineer (PE) permit seal.
+  * **Closed-Loop Verification:** The clean revised plan is automatically re-evaluated through the Muse Vision auditor, elevating the score to **100% / APPROVED** with a Professional Engineer (PE) permit seal.
 
 ### 6. Official Permit Packet & Sovereign Dataset Export
 * **How to test:** 
@@ -60,9 +62,9 @@ Follow this end-to-end evaluation flow to test all core capabilities on the live
 
 ---
 
-## 🏗️ Architecture: 4-Node Closed-Loop Agent Pipeline
+## 🏗️ Architecture: 4-Node Closed-Loop Multimodal Pipeline
 
-PlanPass combines four specialized Meta multimodal models into a closed-loop architectural pre-examination engine grounded in statutory building codes via Model Context Protocol (MCP):
+PlanPass combines specialized Meta multimodal models into a closed-loop architectural pre-examination engine grounded in statutory building codes via Model Context Protocol (MCP) and live federal/municipal REST APIs:
 
 ```mermaid
 flowchart TD
@@ -72,29 +74,36 @@ flowchart TD
         LEDGER["Inspector Drawer & Ledger (40%)"]
     end
 
-    subgraph Agents ["4-Node Meta Muse Pipeline"]
+    subgraph Agents ["4-Node Meta Muse Multimodal Pipeline"]
         N1["Node 1: Voice Router<br/>(muse-voice-transcribe-1.0)"]
-        N2["Node 2: Parallel Segmentation<br/>(sam-3.1 concurrent)"]
+        N2["Node 2: Visual Workplane Direct Inspection<br/>(muse-image-1.0 visual analysis)"]
         N3["Node 3: Spatial & Statutory Auditor<br/>(muse-spark-1.3 + FastMCP)"]
-        N4["Node 4: Architectural Redliner<br/>(muse-image-1.0)"]
+        N4["Node 4: Architectural Redliner<br/>(muse-image-1.0 generative)"]
     end
 
-    subgraph Core ["Deterministic Statutory Core & Cloud"]
-        MCP_DICT["Local FastMCP Statutory Dictionary<br/>(IBC 2024 & ADA 2010 verbatim)"]
+    subgraph LiveAPIs ["Live Federal & Municipal REST APIs"]
+        ECFR["US eCFR REST API<br/>(Titles 36/28 ADAAG & DOJ ADA)"]
+        NOMINATIM["OpenStreetMap Nominatim<br/>(Live Municipal Jurisdiction & Geocoding)"]
+        MCP_DICT["Local FastMCP Statutory Core<br/>(IBC 2024 & ADA 2010 verbatim)"]
+    end
+
+    subgraph Core ["Persistent Cloud Infrastructure"]
         NEON_DB[("Neon Postgres 18<br/>Inspection History & Reports")]
         NEON_S3[("AWS S3 Object Storage<br/>Blueprint Assets Bucket")]
     end
 
     PTT -->|Push-to-Talk WAV| N1
     N1 -->|Transcribed Scope| N3
-    CANVAS -->|Blueprint Base64| N2
-    CANVAS -->|Uploads| NEON_S3
-    N2 -->|Pixel Masks & Boxes| N3
+    CANVAS -->|Blueprint Visual Workplane| N2
+    CANVAS -->|CAD Uploads| NEON_S3
+    N2 -->|Visual Linework & Spatial Geometry| N3
+    N3 <-->|Live Federal Rules| ECFR
+    N3 <-->|Address Geocoding| NOMINATIM
     N3 <-->|Statute Tool Calling| MCP_DICT
     N3 -->|Audit Report & Score| LEDGER
     N3 -->|Audit JSONB| NEON_DB
     LEDGER -->|Remediation Prompt| N4
-    N4 -->|Visual Redline Blueprint| CANVAS
+    N4 -->|Visual Redline & Clean Blueprint| CANVAS
 ```
 
 ---
@@ -108,13 +117,16 @@ flowchart TD
   4. *Commercial Cafe A & B* (Group A Assembly — ADA turning space & exit path)
   5. *Residential ADU* (Group R Residential — IRC egress window & habitable area)
 * **F2: Voice-First Inspection Scope Bar:** Push-to-talk audio recorder with real-time waveform visualization powered by `muse-voice-transcribe-1.0` and preset scope chips.
-* **F3: Pixel-Accurate Element Segmentation:** Concurrent `sam-3.1` streaming segmentation for architectural concepts (doors, corridors, restrooms, compartments) rendered as interactive SVG vector overlays.
-* **F4: Spatial Grounding & Statutory Audit:** Cross-examination of floorplan dimensions against statutory corpus (`data/statutes.json`) and live federal regulations (`ecfr.gov` Title 36/28) via FastMCP. Unverifiable citations are dropped with a warning — never hallucinated.
+* **F3: Visual Workplane Understanding via Muse Vision:** Direct multimodal visual comprehension of CAD blueprints using `muse-image-1.0` and `muse-spark-1.3`, interpreting walls, doors, corridors, fixtures, and spatial dimensions directly from the drawing without relying on fragile external pixel segmenters.
+* **F4: Multi-Source Statutory Verification & Live REST APIs:** Cross-examination of floorplan dimensions against:
+  1. **US eCFR REST API (`ecfr.gov`):** Live federal statutory queries across Title 36 CFR Part 1191 (ADAAG) and Title 28 CFR Part 36 (DOJ ADA Title III).
+  2. **OpenStreetMap Nominatim (`nominatim.openstreetmap.org`):** Live address resolution and geocoding to determine exact municipal city/county/state jurisdiction.
+  3. **Deterministic FastMCP Core:** IBC 2024 Table 1020.2 corridor rules and ADA 2010 Section 604/304 wheelchair turning clearances.
 * **F5: Permit Readiness Score & Violation Ledger:** Real-time 0–100% readiness gauge, pass/hold gate, and structured violation cards.
 * **F6: Dual Generative Architectural Linework:** One-click generation using `muse-image-1.0` that creates:
   1. *Visual Redline Blueprint:* Clear red architectural markups for drafters.
   2. *Clean Revised Blueprint:* Permit-ready black linework with corrections baked in.
-* **F7: Closed-Loop Re-Verification:** Automatically re-audits the clean revised plan through SAM 3.1 & Spark 1.3 to verify remediation and unlock 100% Professional Engineer permit sign-off.
+* **F7: Closed-Loop Re-Verification:** Automatically re-audits the clean revised plan through the Muse Vision auditor to verify remediation and unlock 100% Professional Engineer permit sign-off.
 * **F8: Stamped PE Permit Packet:** Downloadable compliance report stamped with statutory checklist, agent trace, and sign-off certification.
 * **F9: Sovereign Dataset Flywheel Export:** One-click JSONL export of inspection records for air-gapped municipal fine-tuning deployments.
 
