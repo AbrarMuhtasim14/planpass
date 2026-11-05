@@ -18,6 +18,48 @@ Judges can evaluate the live production application instantly without creating a
 
 ---
 
+## 🧪 Step-by-Step Testing Guide: What to Test & How to Test
+
+Follow this end-to-end evaluation flow to test all core capabilities on the live production deployment:
+
+### 1. Instant 1-Click Authentication
+* **How to test:** Navigate to [planpass-zeta.vercel.app/auth.html](https://planpass-zeta.vercel.app/auth.html) and click the green **"⚡ 1-Click Judge Sign-In"** button (or sign in with `judge@hackathon.meta.ai` / `MetaHackathon2026!`).
+* **What to observe:** Instant authentication powered by Neon Auth (Better Auth) with immediate redirect into the CAD Inspection Studio (`index.html`).
+
+### 2. Multi-Industry CAD Floor Plan Loading
+* **How to test:** In the top header bar, click the **"Sample floorplans (live inspection)..."** dropdown and select **"Lincoln High School STEM Academy (Group E) — First Floor"** (or choose Healthcare Hospital, Industrial Factory, Commercial Cafe, or Residential ADU). You can also drag-and-drop your own blueprint image (PNG, JPG, WebP, SVG).
+* **What to observe:** High-resolution architectural blueprint renders dynamically on the 60% interactive canvas with smooth pan, zoom (`+` / `-`), and reset view controls.
+
+### 3. Voice-First Inspection Scoping (Push-to-Talk)
+* **How to test:** 
+  * **Option A (Voice):** Click and hold the **"● Hold to talk — Voice Scope"** button, speak an inspection prompt (e.g., *"Audit STEM corridor for IBC 1020 72-inch clear width and verify ADA 604 restroom door swing clearance"*), then release.
+  * **Option B (Preset Scope Chips):** Click any preset pill (`ADA + Egress audit`, `ADA restroom only`, or `Egress width only`).
+* **What to observe:** Live audio waveform visualization animated during speech, followed by instant voice-to-text transcription via `muse-voice-transcribe-1.0` populating the editable prompt input.
+
+### 4. Live Multi-Agent Municipal Inspection & Statutory Verification
+* **How to test:** Click the blue **"Run inspection"** button in the bottom drawer.
+* **What to observe:**
+  * **Real-Time SAM 3.1 Segmentation:** Color-coded SVG polygon masks stream across the canvas highlighting doors (blue), corridors (teal), restrooms (indigo), and hazard areas. Use the **Layer controls** checkboxes to toggle individual architectural layers on and off.
+  * **Permit Readiness Score Gauge:** The circular SVG gauge animates from 0% to the computed compliance score (e.g., **82%** with a yellow **HOLD** badge for the school STEM wing).
+  * **Statutory Compliance Ledger:** The right-hand drawer displays structured violation cards. Click each card to reveal the exact statute code, violated standard, and remediation recommendation (e.g., *ADA §604.3.2: Restroom door swing overlaps required 60" wheelchair turning circle*).
+  * **FastMCP Agent Trace:** Switch to the **"Agent & MCP Trace"** tab to inspect the real-time tool calls (`lookup_ibc_ada_statute`, `evaluate_corridor_width`, `evaluate_ada_turning_circle`) with exact input arguments and statutory results.
+
+### 5. Generative Architectural Redlining & Clean Revised Blueprint
+* **How to test:** In the bottom drawer, click **"Export Redline Image"** or toggle the checkboxes **"Side-by-side redline"** and **"Clean revised blueprint"**.
+* **What to observe:**
+  * Node 4 (`muse-image-1.0`) synthesizes dual architectural linework:
+    1. **Visual Redline Markup:** Clear red drafter annotations detailing the required door swing reversal.
+    2. **Clean Revised Blueprint:** Production-ready CAD revision with statutory corrections baked in.
+  * **Closed-Loop Verification:** The clean revised plan is automatically re-evaluated through SAM 3.1 & Spark 1.3, elevating the score to **100% / APPROVED** with a Professional Engineer (PE) permit seal.
+
+### 6. Official Permit Packet & Sovereign Dataset Export
+* **How to test:** 
+  * Click **"Download Stamped Permit PDF"** to generate the official municipal permit summary with PE seal, compliance checklist, and violation audit trail.
+  * Click **"Export Air-Gapped JSONL Dataset"** to download sovereign fine-tuning records for air-gapped municipal deployments.
+  * Click the **"History"** tab in the right drawer to verify persistent audit records stored in Neon PostgreSQL.
+
+---
+
 ## 🏗️ Architecture: 4-Node Closed-Loop Agent Pipeline
 
 PlanPass combines four specialized Meta multimodal models into a closed-loop architectural pre-examination engine grounded in statutory building codes via Model Context Protocol (MCP):

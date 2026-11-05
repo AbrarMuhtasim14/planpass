@@ -9,6 +9,10 @@
 credentials.json
 scripts/deploy-payload.json
 
+# Local batch and scratch runners
+*.bat
+demo_assets/
+
 # Dependencies & Build Outputs
 node_modules/
 dist/
